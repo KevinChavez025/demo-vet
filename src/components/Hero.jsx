@@ -11,12 +11,12 @@ function Hero() {
         <p className="mt-4 text-lg text-gray-600">{config.eslogan}</p>
         <a
           href="#reserva"
-          className="mt-8 inline-flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700"
+          className="mt-8 inline-flex items-center gap-2 bg-emerald-700 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-800"
         >
           <CalendarCheck size={20} />
           Reservar cita
         </a>
-        <p className="mt-4 text-sm text-gray-500">{config.horario}</p>
+        <p className="mt-4 text-sm text-gray-600">{config.horario}</p>
       </div>
     </section>
   )

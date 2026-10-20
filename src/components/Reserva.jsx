@@ -103,8 +103,8 @@ function Reserva() {
                     (paso === i + 1
                       ? "border-emerald-600 text-emerald-700 font-semibold"
                       : paso > i + 1
-                      ? "border-emerald-300 text-emerald-500"
-                      : "border-gray-200 text-gray-400")
+                      ? "border-emerald-300 text-emerald-700"
+                      : "border-gray-200 text-gray-600")
                   }
                 >
                   {i + 1}. {t}
@@ -128,7 +128,7 @@ function Reserva() {
                       }
                     >
                       <p className="font-semibold">{s.nombre}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-gray-600">
                         {s.duracion} min - S/ {s.precio}
                       </p>
                     </button>
@@ -138,7 +138,7 @@ function Reserva() {
                   <button
                     disabled={!servicio}
                     onClick={() => setPaso(2)}
-                    className="bg-emerald-600 text-white px-5 py-2 rounded-lg disabled:opacity-40 hover:bg-emerald-700"
+                    className="bg-emerald-700 text-white px-5 py-2 rounded-lg disabled:opacity-40 hover:bg-emerald-800"
                   >
                     Siguiente
                   </button>
@@ -167,13 +167,13 @@ function Reserva() {
                             : "border-gray-200 hover:border-emerald-300")
                         }
                       >
-                        <span className="block text-xs uppercase text-gray-500">
+                        <span className="block text-xs uppercase text-gray-600">
                           {format(d, "EEE", { locale: es })}
                         </span>
                         <span className="block text-lg font-semibold">
                           {format(d, "d")}
                         </span>
-                        <span className="block text-xs text-gray-500">
+                        <span className="block text-xs text-gray-600">
                           {format(d, "MMM", { locale: es })}
                         </span>
                       </button>
@@ -196,7 +196,7 @@ function Reserva() {
                             className={
                               "border rounded-lg py-2 text-sm " +
                               (hora === h
-                                ? "border-emerald-600 bg-emerald-600 text-white"
+                                ? "border-emerald-600 bg-emerald-700 text-white"
                                 : bloqueada
                                 ? "border-gray-100 bg-gray-50 text-gray-300 line-through cursor-not-allowed"
                                 : "border-gray-200 hover:border-emerald-300")
@@ -211,13 +211,13 @@ function Reserva() {
                 )}
 
                 <div className="mt-6 flex justify-between">
-                  <button onClick={() => setPaso(1)} className="text-gray-500 hover:underline">
+                  <button onClick={() => setPaso(1)} className="text-gray-600 hover:underline">
                     Atras
                   </button>
                   <button
                     disabled={!fecha || !hora}
                     onClick={() => setPaso(3)}
-                    className="bg-emerald-600 text-white px-5 py-2 rounded-lg disabled:opacity-40 hover:bg-emerald-700"
+                    className="bg-emerald-700 text-white px-5 py-2 rounded-lg disabled:opacity-40 hover:bg-emerald-800"
                   >
                     Siguiente
                   </button>
@@ -285,12 +285,12 @@ function Reserva() {
                 )}
 
                 <div className="mt-6 flex justify-between">
-                  <button type="button" onClick={() => setPaso(2)} className="text-gray-500 hover:underline">
+                  <button type="button" onClick={() => setPaso(2)} className="text-gray-600 hover:underline">
                     Atras
                   </button>
                   <button
                     type="submit"
-                    className="inline-flex items-center gap-2 bg-emerald-600 text-white px-5 py-2 rounded-lg hover:bg-emerald-700"
+                    className="inline-flex items-center gap-2 bg-emerald-700 text-white px-5 py-2 rounded-lg hover:bg-emerald-800"
                   >
                     <CalendarCheck size={18} />
                     Confirmar por WhatsApp

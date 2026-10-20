@@ -24,7 +24,7 @@ function Navbar() {
           <a href="#contacto" className="hover:text-emerald-700">Contacto</a>
           <a
             href="#reserva"
-            className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700"
+            className="bg-emerald-700 text-white px-4 py-2 rounded-lg hover:bg-emerald-800"
           >
             Reservar cita
           </a>
@@ -33,7 +33,7 @@ function Navbar() {
         <div className="flex items-center gap-2 sm:hidden">
           <a
             href="#reserva"
-            className="bg-emerald-600 text-white text-sm px-3 py-2 rounded-lg hover:bg-emerald-700"
+            className="bg-emerald-700 text-white text-sm px-3 py-2 rounded-lg hover:bg-emerald-800"
           >
             Reservar
           </a>

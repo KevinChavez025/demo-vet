@@ -31,7 +31,7 @@ function Servicios() {
                   <Icono size={24} />
                 </div>
                 <h3 className="mt-4 font-semibold text-gray-800">{s.nombre}</h3>
-                <p className="mt-1 flex items-center justify-center gap-1 text-sm text-gray-500">
+                <p className="mt-1 flex items-center justify-center gap-1 text-sm text-gray-600">
                   <Clock size={14} />
                   {s.duracion} min
                 </p>
