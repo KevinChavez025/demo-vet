@@ -4,6 +4,7 @@ import { addDays, format, getDay } from "date-fns"
 import { es } from "date-fns/locale"
 import { CalendarCheck, Check } from "lucide-react"
 import { config } from "../data/config"
+import { supabase } from "../lib/supabase"
 
 const HORAS = [
   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -21,13 +22,6 @@ function proximosDias() {
   return dias
 }
 
-function ocupada(fecha, hora) {
-  const s = format(fecha, "yyyy-MM-dd") + hora
-  let n = 0
-  for (let i = 0; i < s.length; i++) n += s.charCodeAt(i)
-  return n % 4 === 0
-}
-
 const DIAS = proximosDias()
 
 function Reserva() {
@@ -35,6 +29,11 @@ function Reserva() {
   const [servicio, setServicio] = useState(null)
   const [fecha, setFecha] = useState(null)
   const [hora, setHora] = useState(null)
+  const [ocupadas, setOcupadas] = useState([])
+  const [cargando, setCargando] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [errorServidor, setErrorServidor] = useState("")
+  const [urlWhatsapp, setUrlWhatsapp] = useState("")
   const [enviado, setEnviado] = useState(false)
 
   const {
@@ -45,17 +44,71 @@ function Reserva() {
 
   const fechaTexto = fecha ? format(fecha, "EEEE d 'de' MMMM", { locale: es }) : ""
 
-  function enviar(datos) {
+  async function cargarOcupadas(d) {
+    setCargando(true)
+    setErrorServidor("")
+    if (!supabase) {
+      setOcupadas([])
+      setErrorServidor("El servicio de reservas no esta disponible.")
+      setCargando(false)
+      return
+    }
+    const { data, error } = await supabase.rpc("horas_ocupadas", {
+      p_fecha: format(d, "yyyy-MM-dd"),
+    })
+    if (error) {
+      setOcupadas([])
+      setErrorServidor("No pudimos cargar los horarios. Intenta de nuevo.")
+    } else {
+      setOcupadas(data.map((r) => r.hora))
+    }
+    setCargando(false)
+  }
+
+  function seleccionarDia(d) {
+    setFecha(d)
+    setHora(null)
+    cargarOcupadas(d)
+  }
+
+  async function enviar(datos) {
+    if (!supabase || guardando) return
+    setGuardando(true)
+    setErrorServidor("")
+
+    const { error } = await supabase.from("citas").insert({
+      servicio: servicio.nombre,
+      fecha: format(fecha, "yyyy-MM-dd"),
+      hora: hora,
+      nombre: datos.nombre.trim(),
+      telefono: datos.telefono,
+      mascota: datos.mascota.trim(),
+    })
+
+    if (error) {
+      if (error.code === "23505") {
+        setHora(null)
+        await cargarOcupadas(fecha)
+        setErrorServidor("Ese horario acaba de ser tomado. Elige otro.")
+        setPaso(2)
+      } else {
+        setErrorServidor("No pudimos registrar tu cita. Intenta de nuevo.")
+      }
+      setGuardando(false)
+      return
+    }
+
     const mensaje =
-      "Hola, quiero reservar una cita en " + config.nombre + ".\n" +
+      "Hola, acabo de reservar una cita en " + config.nombre + ".\n" +
       "Servicio: " + servicio.nombre + "\n" +
       "Fecha: " + fechaTexto + "\n" +
       "Hora: " + hora + "\n" +
       "Mascota: " + datos.mascota + "\n" +
-      "Nombre: " + datos.nombre + "\n" +
-      "Telefono: " + datos.telefono
-    const url = "https://wa.me/" + config.whatsapp + "?text=" + encodeURIComponent(mensaje)
-    window.open(url, "_blank", "noopener,noreferrer")
+      "Nombre: " + datos.nombre
+    setUrlWhatsapp(
+      "https://wa.me/" + config.whatsapp + "?text=" + encodeURIComponent(mensaje)
+    )
+    setGuardando(false)
     setEnviado(true)
   }
 
@@ -64,6 +117,9 @@ function Reserva() {
     setServicio(null)
     setFecha(null)
     setHora(null)
+    setOcupadas([])
+    setErrorServidor("")
+    setUrlWhatsapp("")
     setEnviado(false)
   }
 
@@ -81,16 +137,29 @@ function Reserva() {
             <div className="mx-auto w-14 h-14 flex items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
               <Check size={28} />
             </div>
-            <h3 className="mt-4 text-xl font-semibold">Solicitud enviada</h3>
-            <p className="mt-2 text-gray-600">
-              Se abrio WhatsApp con tu solicitud. La clinica te confirmara la cita.
+            <h3 className="mt-4 text-xl font-semibold">Cita registrada</h3>
+            <p className="mt-2 text-gray-600 capitalize">
+              {servicio.nombre} - {fechaTexto}, {hora}
             </p>
-            <button
-              onClick={reiniciar}
-              className="mt-6 text-emerald-700 font-medium hover:underline"
+            <p className="mt-2 text-gray-600">
+              La clinica confirmara tu cita pronto.
+            </p>
+            <a
+              href={urlWhatsapp}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-block bg-emerald-700 text-white px-5 py-2 rounded-lg hover:bg-emerald-800"
             >
-              Hacer otra reserva
-            </button>
+              Avisar por WhatsApp (opcional)
+            </a>
+            <div>
+              <button
+                onClick={reiniciar}
+                className="mt-4 text-emerald-700 font-medium hover:underline"
+              >
+                Hacer otra reserva
+              </button>
+            </div>
           </div>
         ) : (
           <div className="mt-8 bg-white rounded-xl p-6 shadow-sm">
@@ -111,6 +180,15 @@ function Reserva() {
                 </li>
               ))}
             </ol>
+
+            {errorServidor && (
+              <p
+                role="alert"
+                className="mb-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700"
+              >
+                {errorServidor}
+              </p>
+            )}
 
             {paso === 1 && (
               <div>
@@ -156,10 +234,7 @@ function Reserva() {
                       <button
                         key={d.toISOString()}
                         type="button"
-                        onClick={() => {
-                          setFecha(d)
-                          setHora(null)
-                        }}
+                        onClick={() => seleccionarDia(d)}
                         className={
                           "shrink-0 w-20 border rounded-lg py-2 text-center " +
                           (activo
@@ -184,29 +259,33 @@ function Reserva() {
                 {fecha && (
                   <div className="mt-4">
                     <p className="text-sm font-medium text-gray-700">Elige la hora</p>
-                    <div className="mt-2 grid grid-cols-3 sm:grid-cols-6 gap-2">
-                      {HORAS.map((h) => {
-                        const bloqueada = ocupada(fecha, h)
-                        return (
-                          <button
-                            key={h}
-                            type="button"
-                            disabled={bloqueada}
-                            onClick={() => setHora(h)}
-                            className={
-                              "border rounded-lg py-2 text-sm " +
-                              (hora === h
-                                ? "border-emerald-600 bg-emerald-700 text-white"
-                                : bloqueada
-                                ? "border-gray-100 bg-gray-50 text-gray-300 line-through cursor-not-allowed"
-                                : "border-gray-200 hover:border-emerald-300")
-                            }
-                          >
-                            {h}
-                          </button>
-                        )
-                      })}
-                    </div>
+                    {cargando ? (
+                      <p className="mt-2 text-sm text-gray-600">Cargando horarios...</p>
+                    ) : (
+                      <div className="mt-2 grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        {HORAS.map((h) => {
+                          const bloqueada = ocupadas.includes(h)
+                          return (
+                            <button
+                              key={h}
+                              type="button"
+                              disabled={bloqueada}
+                              onClick={() => setHora(h)}
+                              className={
+                                "border rounded-lg py-2 text-sm " +
+                                (hora === h
+                                  ? "border-emerald-600 bg-emerald-700 text-white"
+                                  : bloqueada
+                                  ? "border-gray-100 bg-gray-50 text-gray-300 line-through cursor-not-allowed"
+                                  : "border-gray-200 hover:border-emerald-300")
+                              }
+                            >
+                              {h}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -216,7 +295,10 @@ function Reserva() {
                   </button>
                   <button
                     disabled={!fecha || !hora}
-                    onClick={() => setPaso(3)}
+                    onClick={() => {
+                      setErrorServidor("")
+                      setPaso(3)
+                    }}
                     className="bg-emerald-700 text-white px-5 py-2 rounded-lg disabled:opacity-40 hover:bg-emerald-800"
                   >
                     Siguiente
@@ -239,6 +321,7 @@ function Reserva() {
                       {...register("nombre", {
                         required: "Ingresa tu nombre",
                         minLength: { value: 3, message: "Minimo 3 letras" },
+                        maxLength: { value: 80, message: "Maximo 80 letras" },
                       })}
                       className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
                     />
@@ -263,7 +346,10 @@ function Reserva() {
                   <div className="sm:col-span-2">
                     <label className="text-sm font-medium">Nombre de tu mascota</label>
                     <input
-                      {...register("mascota", { required: "Ingresa el nombre de tu mascota" })}
+                      {...register("mascota", {
+                        required: "Ingresa el nombre de tu mascota",
+                        maxLength: { value: 60, message: "Maximo 60 letras" },
+                      })}
                       className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
                     />
                     {errors.mascota && (
@@ -296,10 +382,11 @@ function Reserva() {
                   </button>
                   <button
                     type="submit"
-                    className="inline-flex items-center gap-2 bg-emerald-700 text-white px-5 py-2 rounded-lg hover:bg-emerald-800"
+                    disabled={guardando}
+                    className="inline-flex items-center gap-2 bg-emerald-700 text-white px-5 py-2 rounded-lg disabled:opacity-60 hover:bg-emerald-800"
                   >
                     <CalendarCheck size={18} />
-                    Confirmar por WhatsApp
+                    {guardando ? "Guardando..." : "Confirmar cita"}
                   </button>
                 </div>
               </form>

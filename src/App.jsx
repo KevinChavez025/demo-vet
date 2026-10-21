@@ -5,9 +5,14 @@ import Reserva from "./components/Reserva"
 import Contacto from "./components/Contacto"
 import Privacidad from "./components/Privacidad"
 import WhatsAppFlotante from "./components/WhatsAppFlotante"
+import Panel from "./components/Panel"
 import { config } from "./data/config"
 
 function App() {
+  if (window.location.pathname === "/panel") {
+    return <Panel />
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />

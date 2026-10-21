@@ -35,15 +35,17 @@ function Privacidad() {
 
         <h3 className="mt-5 font-semibold">3. Para que los usamos</h3>
         <p className="mt-1">
-          Solo para gestionar y confirmar tu cita. No usamos tus datos para
-          otros fines ni los vendemos a terceros.
+          Solo para gestionar, confirmar y contactarte sobre tu cita. No usamos
+          tus datos para otros fines ni los vendemos a terceros.
         </p>
 
-        <h3 className="mt-5 font-semibold">4. Como se envian</h3>
+        <h3 className="mt-5 font-semibold">4. Donde se almacenan</h3>
         <p className="mt-1">
-          Al confirmar, se abre WhatsApp con un mensaje que contiene tus datos y
-          que se envia a la clinica. Este sitio web no guarda tus datos en
-          ningun servidor. El uso de WhatsApp se rige por sus propias politicas.
+          Al confirmar tu cita, tus datos se guardan en una base de datos en la
+          nube (proveedor Supabase), a la que solo accede el personal autorizado
+          de la clinica mediante usuario y clave. Si decides avisar por
+          WhatsApp despues de reservar, ese mensaje se envia a traves de
+          WhatsApp y se rige por sus propias politicas.
         </p>
 
         <h3 className="mt-5 font-semibold">5. Conservacion</h3>
