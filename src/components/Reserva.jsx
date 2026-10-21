@@ -278,7 +278,13 @@ function Reserva() {
                     {...register("acepto", { required: "Debes aceptar para continuar" })}
                     className="mt-1"
                   />
-                  Acepto el tratamiento de mis datos personales para gestionar mi cita.
+                  <span>
+                    Acepto el tratamiento de mis datos personales segun la{" "}
+                    <a href="#privacidad" className="text-emerald-700 underline">
+                      politica de privacidad
+                    </a>
+                    .
+                  </span>
                 </label>
                 {errors.acepto && (
                   <p className="mt-1 text-xs text-red-600">{errors.acepto.message}</p>
