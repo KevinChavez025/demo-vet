@@ -23,7 +23,7 @@ export async function onRequestPost(context) {
   let body
   try {
     body = await request.json()
-  } catch (e) {
+  } catch {
     return json({ error: "invalido" }, 400)
   }
   body = body || {}

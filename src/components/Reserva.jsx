@@ -136,7 +136,7 @@ function Reserva() {
           mascota: datos.mascota.trim(),
         }),
       })
-    } catch (e) {
+    } catch {
       setErrorServidor("No pudimos conectar. Revisa tu internet e intenta de nuevo.")
       reiniciarWidget()
       setGuardando(false)
@@ -373,7 +373,7 @@ function Reserva() {
             )}
 
             {paso === 3 && (
-              <form onSubmit={handleSubmit(enviar)} noValidate>
+              <form onSubmit={(evento) => handleSubmit(enviar)(evento)} noValidate>
                 <div className="bg-emerald-50 rounded-lg p-4 text-sm text-gray-700">
                   <p className="font-semibold">{servicio.nombre} - S/ {servicio.precio}</p>
                   <p className="capitalize">{fechaTexto}, {hora}</p>
