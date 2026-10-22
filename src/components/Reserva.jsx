@@ -1,10 +1,12 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { addDays, format, getDay } from "date-fns"
 import { es } from "date-fns/locale"
 import { CalendarCheck, Check } from "lucide-react"
 import { config } from "../data/config"
 import { supabase } from "../lib/supabase"
+
+const SITE_KEY = "0x4AAAAAAFf5TGIMFW4JfVjy"
 
 const HORAS = [
   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -35,6 +37,10 @@ function Reserva() {
   const [errorServidor, setErrorServidor] = useState("")
   const [urlWhatsapp, setUrlWhatsapp] = useState("")
   const [enviado, setEnviado] = useState(false)
+  const [token, setToken] = useState("")
+
+  const widgetRef = useRef(null)
+  const widgetId = useRef(null)
 
   const {
     register,
@@ -43,6 +49,45 @@ function Reserva() {
   } = useForm()
 
   const fechaTexto = fecha ? format(fecha, "EEEE d 'de' MMMM", { locale: es }) : ""
+
+  useEffect(() => {
+    if (paso !== 3) return undefined
+
+    let intervalo = null
+
+    function montar() {
+      if (!window.turnstile || !widgetRef.current) return false
+      widgetId.current = window.turnstile.render(widgetRef.current, {
+        sitekey: SITE_KEY,
+        callback: (t) => setToken(t),
+        "expired-callback": () => setToken(""),
+        "error-callback": () => setToken(""),
+      })
+      return true
+    }
+
+    if (!montar()) {
+      intervalo = setInterval(() => {
+        if (montar()) clearInterval(intervalo)
+      }, 300)
+    }
+
+    return () => {
+      if (intervalo) clearInterval(intervalo)
+      if (widgetId.current !== null && window.turnstile) {
+        window.turnstile.remove(widgetId.current)
+      }
+      widgetId.current = null
+      setToken("")
+    }
+  }, [paso])
+
+  function reiniciarWidget() {
+    setToken("")
+    if (widgetId.current !== null && window.turnstile) {
+      window.turnstile.reset(widgetId.current)
+    }
+  }
 
   async function cargarOcupadas(d) {
     setCargando(true)
@@ -72,44 +117,64 @@ function Reserva() {
   }
 
   async function enviar(datos) {
-    if (!supabase || guardando) return
+    if (guardando || !token) return
     setGuardando(true)
     setErrorServidor("")
 
-    const { error } = await supabase.from("citas").insert({
-      servicio: servicio.nombre,
-      fecha: format(fecha, "yyyy-MM-dd"),
-      hora: hora,
-      nombre: datos.nombre.trim(),
-      telefono: datos.telefono,
-      mascota: datos.mascota.trim(),
-    })
-
-    if (error) {
-      if (error.code === "23505") {
-        setHora(null)
-        await cargarOcupadas(fecha)
-        setErrorServidor("Ese horario acaba de ser tomado. Elige otro.")
-        setPaso(2)
-      } else {
-        setErrorServidor("No pudimos registrar tu cita. Intenta de nuevo.")
-      }
+    let respuesta
+    try {
+      respuesta = await fetch("/api/reservar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: token,
+          servicio: servicio.nombre,
+          fecha: format(fecha, "yyyy-MM-dd"),
+          hora: hora,
+          nombre: datos.nombre.trim(),
+          telefono: datos.telefono,
+          mascota: datos.mascota.trim(),
+        }),
+      })
+    } catch (e) {
+      setErrorServidor("No pudimos conectar. Revisa tu internet e intenta de nuevo.")
+      reiniciarWidget()
       setGuardando(false)
       return
     }
 
-    const mensaje =
-      "Hola, acabo de reservar una cita en " + config.nombre + ".\n" +
-      "Servicio: " + servicio.nombre + "\n" +
-      "Fecha: " + fechaTexto + "\n" +
-      "Hora: " + hora + "\n" +
-      "Mascota: " + datos.mascota + "\n" +
-      "Nombre: " + datos.nombre
-    setUrlWhatsapp(
-      "https://wa.me/" + config.whatsapp + "?text=" + encodeURIComponent(mensaje)
-    )
+    if (respuesta.status === 201) {
+      const mensaje =
+        "Hola, acabo de reservar una cita en " + config.nombre + ".\n" +
+        "Servicio: " + servicio.nombre + "\n" +
+        "Fecha: " + fechaTexto + "\n" +
+        "Hora: " + hora + "\n" +
+        "Mascota: " + datos.mascota + "\n" +
+        "Nombre: " + datos.nombre
+      setUrlWhatsapp(
+        "https://wa.me/" + config.whatsapp + "?text=" + encodeURIComponent(mensaje)
+      )
+      setGuardando(false)
+      setEnviado(true)
+      return
+    }
+
+    if (respuesta.status === 409) {
+      setHora(null)
+      await cargarOcupadas(fecha)
+      setErrorServidor("Ese horario acaba de ser tomado. Elige otro.")
+      setPaso(2)
+    } else if (respuesta.status === 403) {
+      setErrorServidor("No pudimos verificar que eres una persona. Intenta de nuevo.")
+      reiniciarWidget()
+    } else if (respuesta.status === 400) {
+      setErrorServidor("Revisa los datos ingresados e intenta de nuevo.")
+      reiniciarWidget()
+    } else {
+      setErrorServidor("No pudimos registrar tu cita. Intenta de nuevo.")
+      reiniciarWidget()
+    }
     setGuardando(false)
-    setEnviado(true)
   }
 
   function reiniciar() {
@@ -376,13 +441,15 @@ function Reserva() {
                   <p className="mt-1 text-xs text-red-600">{errors.acepto.message}</p>
                 )}
 
+                <div ref={widgetRef} className="mt-4" />
+
                 <div className="mt-6 flex justify-between">
                   <button type="button" onClick={() => setPaso(2)} className="text-gray-600 hover:underline">
                     Atras
                   </button>
                   <button
                     type="submit"
-                    disabled={guardando}
+                    disabled={guardando || !token}
                     className="inline-flex items-center gap-2 bg-emerald-700 text-white px-5 py-2 rounded-lg disabled:opacity-60 hover:bg-emerald-800"
                   >
                     <CalendarCheck size={18} />
